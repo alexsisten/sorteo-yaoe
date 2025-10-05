@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Sorteo Yape</title>
+  <meta name="robots" content="noindex, nofollow">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #dc2626;
+      --success: #059669;
+      --error: #dc2626;
+      --warning: #d97706;
+      --bg: #0f172a;
+      --card: rgba(20, 20, 20, 0.9);
+      --text: #f8fafc;
+      --text2: #94a3b8;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--bg), #1a1a1a, #2a2a2a);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 15px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .login-container {
+      max-width: 400px;
+      margin: 100px auto;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(15px);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(220, 38, 38, 0.3);
+    }
+
+    h1 {
+      color: var(--primary);
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    h2 {
+      color: var(--primary);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 15px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #b91c1c;
+      transform: translateY(-2px);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #047857;
+    }
+
+    .btn-warning {
+      background: var(--warning);
+      color: white;
+    }
+
+    .btn-danger {
+      background: #991b1b;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(20, 20, 20, 0.9);
+      border: 2px solid rgba(220, 38, 38, 0.3);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .roulette-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .roulette {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      border: 6px solid var(--primary);
+      background: #1a1a1a;
+      position: relative;
+      margin: 20px auto;
+      overflow: hidden;
+    }
+
+    .roulette-pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 30px solid var(--primary);
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+
+    .roulette-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      z-index: 5;
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+    }
+
+    .winner-display {
+      background: rgba(5, 150, 105, 0.1);
+      border: 2px solid var(--success);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .winner-display.show {
+      display: block;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .winner-code {
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--primary);
+      margin: 10px 0;
+    }
+
+    .participantes-list {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+
+    .participante-item {
+      background: rgba(220, 38, 38, 0.05);
+      border: 1px solid rgba(220, 38, 38, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .participante-info {
+      flex: 1;
+    }
+
+    .participante-codigo {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 14px;
+    }
+
+    .participante-meta {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+
+    .mensaje {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 14px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mensaje.success {
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .mensaje.error {
+      background: rgba(220, 38, 38, 0.1);
+      color: var(--error);
+      border: 1px solid var(--error);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+
+    .timer-config {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .timer-config { grid-template-columns: 1fr; }
+      .roulette { width: 250px; height: 250px; }
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(20, 20, 20, 0.5); }
+    ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="login-container">
+    <div class="card">
+      <h1>🔐 Acceso Administrativo</h1>
+      <p style="text-align: center; color: var(--text2); margin-bottom: 20px;">Panel de control del sorteo</p>
+      
+      <input type="text" id="loginUsuario" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password">
+      
+      <button class="btn btn-primary" onclick="iniciarSesion()" style="width: 100%; margin-top: 10px;">
+        🔓 Iniciar Sesión
+      </button>
+      
+      <div id="mensajeLogin"></div>
+      
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="index.html" style="color: var(--text2); font-size: 12px; text-decoration: none;">
+          ← Volver al inicio
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel" class="container hidden">
+    <div class="card">
+      <h1>🔥 Panel Administrativo</h1>
+      <p style="text-align: center; color: var(--text2); margin-bottom: 15px;">Gestión de sorteos Yape Premium</p>
+      
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-secondary">🏠 Volver al Inicio</a>
+        <button class="btn btn-warning btn-small" onclick="limpiarTodo()">🗑️ Limpiar Todo</button>
+        <button class="btn btn-danger btn-small" onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="totalParticipantes">0</div>
+          <div class="stat-label">👥 Participantes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalSorteos">0</div>
+          <div class="stat-label">🎰 Sorteos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">S/ 5.00</div>
+          <div class="stat-label">💰 Premio</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- GESTIÓN DE PARTICIPANTES -->
+      <div class="card">
+        <h2>👥 Gestión de Participantes</h2>
+        
+        <input type="text" id="nombreParticipante" placeholder="Nombre del participante">
+        <input type="text" id="codigoParticipante" placeholder="Código (ej: WIN123)" style="text-transform: uppercase;">
+        <input type="tel" id="telefonoParticipante" placeholder="Teléfono (opcional)">
+        
+        <button class="btn btn-success" onclick="agregarParticipante()" style="width: 100%; margin-bottom: 10px;">
+          ✅ Agregar Participante
+        </button>
+        
+        <button class="btn btn-warning" onclick="cargarParticipantesEjemplo()" style="width: 100%;">
+          📝 Cargar Datos de Ejemplo
+        </button>
+
+        <div id="mensajeParticipantes"></div>
+
+        <div class="participantes-list" id="listaParticipantes">
+          <p style="text-align: center; color: var(--text2); padding: 20px;">
+            Cargando participantes...
+          </p>
+        </div>
+      </div>
+
+      <!-- SORTEO -->
+      <div class="card">
+        <h2>🎰 Realizar Sorteo</h2>
+        
+        <button class="btn btn-primary" onclick="realizarSorteo()" id="btnSorteo" style="width: 100%; margin-bottom: 15px;">
+          🎲 Iniciar Sorteo Aleatorio
+        </button>
+
+        <div class="roulette-container">
+          <div class="roulette" id="roulette">
+            <div class="roulette-pointer"></div>
+            <div class="roulette-center">🎯</div>
+            <div id="rouletteSegments"></div>
+          </div>
+
+          <div class="winner-display" id="winnerDisplay">
+            <div style="color: var(--success); font-weight: 900; font-size: 18px; margin-bottom: 10px;">
+              🏆 ¡GANADOR DEL SORTEO!
+            </div>
+            <div class="winner-code" id="winnerCode">-</div>
+            <div style="color: var(--text); font-size: 16px; font-weight: 600; margin-top: 10px;" id="winnerName">-</div>
+            <div style="color: var(--primary); font-size: 20px; font-weight: 800; margin-top: 10px;">
+              💰 S/ 5.00
+            </div>
+          </div>
+        </div>
+
+        <div id="mensajeSorteo"></div>
+      </div>
+    </div>
+
+    <!-- CONFIGURACIÓN DE TIMER -->
+    <div class="card">
+      <h2>⏰ Configurar Próximo Sorteo</h2>
+      
+      <div class="timer-config">
+        <div>
+          <label style="color: var(--text2); font-size: 12px; margin-bottom: 5px; display: block;">📅 Fecha</label>
+          <input type="date" id="fechaSorteo">
+        </div>
+        <div>
+          <label style="color: var(--text2); font-size: 12px; margin-bottom: 5px; display: block;">🕐 Hora</label>
+          <input type="time" id="horaSorteo">
+        </div>
+      </div>
+      
+      <button class="btn btn-warning" onclick="configurarTimer()" style="width: 100%; margin-top: 10px;">
+        💾 Guardar Configuración
+      </button>
+
+      <div id="mensajeTimer"></div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // CONFIGURACIÓN DE SUPABASE - ✅ CONFIGURADO
+    // ========================================
+    const SUPABASE_URL = 'https://riwkisfuvwioqchfxoeg.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpd2tpc2Z1dndpb3FjaGZ4b2VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2NTcyMDUsImV4cCI6MjA3NTIzMzIwNX0.wpCCS6BGwGWkKnXzqNbFrT1P_uAWOUpB73bEEqY6-zE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // CREDENCIALES DE ACCESO
+    const ADMIN_USER = 'alex';
+    const ADMIN_PASS = 'alex25';
+
+    let participantes = [];
+    let sorteoEnCurso = false;
+
+    // ========================================
+    // AUTENTICACIÓN
+    // ========================================
+
+    function iniciarSesion() {
+      const usuario = document.getElementById('loginUsuario').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (usuario === ADMIN_USER && password === ADMIN_PASS) {
+        sessionStorage.setItem('adminAutenticado', 'true');
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        cargarDatos();
+        mostrarMensajeLogin('✅ Acceso concedido', 'success');
+      } else {
+        mostrarMensajeLogin('❌ Usuario o contraseña incorrectos', 'error');
+      }
+    }
+
+    function cerrarSesion() {
+      if (confirm('¿Cerrar sesión?')) {
+        sessionStorage.removeItem('adminAutenticado');
+        location.reload();
+      }
+    }
+
+    function verificarSesion() {
+      const autenticado = sessionStorage.getItem('adminAutenticado');
+      if (autenticado === 'true') {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        cargarDatos();
+      }
+    }
+
+    function mostrarMensajeLogin(mensaje, tipo) {
+      const elemento = document.getElementById('mensajeLogin');
+      elemento.innerHTML = `<div class="mensaje ${tipo}">${mensaje}</div>`;
+      setTimeout(() => {
+        elemento.innerHTML = '';
+      }, 3000);
+    }
+
+    // ========================================
+    // FUNCIONES DE SUPABASE
+    // ========================================
+
+    async function cargarDatos() {
+      await cargarParticipantes();
+      await actualizarEstadisticas();
+    }
+
+    async function cargarParticipantes() {
+      try {
+        const { data, error } = await supabase
+          .from('participantes')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        participantes = data || [];
+        actualizarLista();
+      } catch (error) {
+        console.error('Error al cargar participantes:', error);
+        mostrarMensaje('mensajeParticipantes', '❌ Error al cargar participantes', 'error');
+      }
+    }
+
+    async function agregarParticipante() {
+      const nombre = document.getElementById('nombreParticipante').value.trim();
+      const codigo = document.getElementById('codigoParticipante').value.trim().toUpperCase();
+      const telefono = document.getElementById('telefonoParticipante').value.trim();
+
+      if (!nombre || !codigo) {
+        mostrarMensaje('mensajeParticipantes', '❌ Completa nombre y código', 'error');
+        return;
+      }
+
+      if (participantes.some(p => p.codigo === codigo)) {
+        mostrarMensaje('mensajeParticipantes', '❌ El código ya existe', 'error');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('participantes')
+          .insert([
+            {
+              nombre,
+              codigo,
+              telefono: telefono || 'No especificado'
+            }
+          ])
+          .select();
+
+        if (error) throw error;
+
+        participantes.unshift(data[0]);
+        actualizarLista();
+        actualizarEstadisticas();
+
+        document.getElementById('nombreParticipante').value = '';
+        document.getElementById('codigoParticipante').value = '';
+        document.getElementById('telefonoParticipante').value = '';
+
+        mostrarMensaje('mensajeParticipantes', `✅ ${nombre} agregado correctamente`, 'success');
+      } catch (error) {
+        console.error('Error al agregar participante:', error);
+        mostrarMensaje('mensajeParticipantes', '❌ Error al agregar participante', 'error');
+      }
+    }
+
+    async function eliminarParticipante(id, codigo) {
+      if (confirm(`¿Eliminar participante ${codigo}?`)) {
+        try {
+          const { error } = await supabase
+            .from('participantes')
+            .delete()
+            .eq('id', id);
+
+          if (error) throw error;
+
+          participantes = participantes.filter(p => p.id !== id);
+          actualizarLista();
+          actualizarEstadisticas();
+          mostrarMensaje('mensajeParticipantes', '🗑️ Participante eliminado', 'success');
+        } catch (error) {
+          console.error('Error al eliminar:', error);
+          mostrarMensaje('mensajeParticipantes', '❌ Error al eliminar', 'error');
+        }
+      }
+    }
+
+    function actualizarLista() {
+      const lista = document.getElementById('listaParticipantes');
+      
+      if (participantes.length === 0) {
+        lista.innerHTML = '<p style="text-align: center; color: var(--text2); padding: 20px;">No hay participantes registrados</p>';
+        return;
+      }
+
+      lista.innerHTML = participantes.map(p => `
+        <div class="participante-item">
+          <div class="participante-info">
+            <div class="participante-codigo">${p.codigo}</div>
+            <div class="participante-meta">👤 ${p.nombre} | 📱 ${p.telefono}</div>
+          </div>
+          <button class="btn btn-danger btn-small" onclick="eliminarParticipante('${p.id}', '${p.codigo}')">
+            🗑️
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function actualizarEstadisticas() {
+      document.getElementById('totalParticipantes').textContent = participantes.length;
+      
+      try {
+        const { data, error } = await supabase
+          .from('ganadores')
+          .select('id');
+        
+        if (error) throw error;
+        document.getElementById('totalSorteos').textContent = data ? data.length : '0';
+      } catch (error) {
+        document.getElementById('totalSorteos').textContent = '0';
+      }
+    }
+
+    async function cargarParticipantesEjemplo() {
+      const ejemplos = [
+        { nombre: 'Juan Pérez', codigo: 'WIN001', telefono: '987654321' },
+        { nombre: 'María García', codigo: 'WIN002', telefono: '965432187' },
+        { nombre: 'Carlos López', codigo: 'WIN003', telefono: '945678912' },
+        { nombre: 'Ana Torres', codigo: 'WIN004', telefono: '923456789' },
+        { nombre: 'Luis Ramos', codigo: 'WIN005', telefono: '912345678' }
+      ];
+
+      try {
+        for (const ejemplo of ejemplos) {
+          if (!participantes.some(p => p.codigo === ejemplo.codigo)) {
+            const { error } = await supabase
+              .from('participantes')
+              .insert([ejemplo]);
+            
+            if (error) throw error;
+          }
+        }
+
+        await cargarParticipantes();
+        mostrarMensaje('mensajeParticipantes', '✅ Participantes de ejemplo cargados', 'success');
+      } catch (error) {
+        console.error('Error al cargar ejemplos:', error);
+        mostrarMensaje('mensajeParticipantes', '❌ Error al cargar ejemplos', 'error');
+      }
+    }
+
+    // ========================================
+    // SORTEO
+    // ========================================
+
+    function crearRuleta() {
+      const segmentsContainer = document.getElementById('rouletteSegments');
+      const total = participantes.length;
+      
+      if (total === 0) return;
+      
+      const anglePerSegment = 360 / total;
+      const colors = ['#dc2626', '#b91c1c', '#991b1b', '#7f1d1d', '#450a0a', '#ef4444'];
+      
+      segmentsContainer.innerHTML = '';
+      
+      participantes.forEach((participante, index) => {
+        const segment = document.createElement('div');
+        const angle = anglePerSegment * index;
+        
+        segment.style.cssText = `
+          position: absolute;
+          width: 50%;
+          height: 50%;
+          transform-origin: 100% 100%;
+          transform: rotate(${angle}deg);
+          clip-path: polygon(0 100%, 100% 100%, ${Math.cos((anglePerSegment * Math.PI) / 180) * 100}% ${100 - Math.sin((anglePerSegment * Math.PI) / 180) * 100}%);
+          background: ${colors[index % colors.length]};
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        `;
+        
+        const text = document.createElement('div');
+        text.style.cssText = `
+          position: absolute;
+          transform: rotate(${anglePerSegment/2}deg) translateY(-80px);
+          font-size: 11px;
+          font-weight: 700;
+          color: white;
+          text-align: center;
+          width: 60px;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        `;
+        text.textContent = participante.codigo;
+        
+        segment.appendChild(text);
+        segmentsContainer.appendChild(segment);
+      });
+    }
+
+    async function realizarSorteo() {
+      if (sorteoEnCurso) return;
+      
+      if (participantes.length === 0) {
+        mostrarMensaje('mensajeSorteo', '❌ No hay participantes para el sorteo', 'error');
+        return;
+      }
+
+      sorteoEnCurso = true;
+      document.getElementById('btnSorteo').disabled = true;
+      document.getElementById('winnerDisplay').classList.remove('show');
+
+      crearRuleta();
+
+      const rouletteSegments = document.getElementById('rouletteSegments');
+      const indiceGanador = Math.floor(Math.random() * participantes.length);
+      const ganador = participantes[indiceGanador];
+
+      const anglePerSegment = 360 / participantes.length;
+      const targetAngle = (indiceGanador * anglePerSegment) + (anglePerSegment / 2);
+      const randomSpins = 5 + Math.random() * 3;
+      const finalRotation = (360 * randomSpins) + (360 - targetAngle);
+
+      rouletteSegments.style.transition = 'none';
+      rouletteSegments.style.transform = 'rotate(0deg)';
+
+      setTimeout(() => {
+        rouletteSegments.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        rouletteSegments.style.transform = `rotate(${finalRotation}deg)`;
+      }, 100);
+
+      setTimeout(async () => {
+        document.getElementById('winnerCode').textContent = ganador.codigo;
+        document.getElementById('winnerName').textContent = ganador.nombre;
+        document.getElementById('winnerDisplay').classList.add('show');
+
+        try {
+          const { error } = await supabase
+            .from('ganadores')
+            .insert([
+              {
+                codigo: ganador.codigo,
+                nombre: ganador.nombre
+              }
+            ]);
+
+          if (error) throw error;
+
+          mostrarMensaje('mensajeSorteo', `🎊 ¡${ganador.nombre} es el ganador con el código ${ganador.codigo}!`, 'success');
+          await actualizarEstadisticas();
+        } catch (error) {
+          console.error('Error al guardar ganador:', error);
+          mostrarMensaje('mensajeSorteo', '⚠️ Ganador seleccionado pero error al guardar', 'error');
+        }
+
+        sorteoEnCurso = false;
+        document.getElementById('btnSorteo').disabled = false;
+      }, 4500);
+    }
+
+    // ========================================
+    // CONFIGURACIÓN DE TIMER
+    // ========================================
+
+    async function configurarTimer() {
+      const fecha = document.getElementById('fechaSorteo').value;
+      const hora = document.getElementById('horaSorteo').value;
+
+      if (!fecha || !hora) {
+        mostrarMensaje('mensajeTimer', '❌ Completa fecha y hora', 'error');
+        return;
+      }
+
+      const fechaCompleta = new Date(`${fecha}T${hora}`);
+      
+      if (fechaCompleta <= new Date()) {
+        mostrarMensaje('mensajeTimer', '❌ La fecha debe ser futura', 'error');
+        return;
+      }
+
+      const config = {
+        fechaProximoSorteo: fechaCompleta.toISOString()
+      };
+
+      try {
+        const { error } = await supabase
+          .from('configuracion')
+          .upsert([
+            {
+              clave: 'proximo_sorteo',
+              valor: config
+            }
+          ], { onConflict: 'clave' });
+
+        if (error) throw error;
+
+        mostrarMensaje('mensajeTimer', `✅ Sorteo programado para ${fechaCompleta.toLocaleString('es-PE')}`, 'success');
+      } catch (error) {
+        console.error('Error al configurar timer:', error);
+        mostrarMensaje('mensajeTimer', '❌ Error al guardar configuración', 'error');
+      }
+    }
+
+    // ========================================
+    // UTILIDADES
+    // ========================================
+
+    async function limpiarTodo() {
+      if (confirm('⚠️ ¿Estás seguro? Esto eliminará TODOS los datos (participantes, ganadores y configuración)')) {
+        try {
+          await supabase.from('participantes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('ganadores').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('configuracion').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          
+          participantes = [];
+          actualizarLista();
+          actualizarEstadisticas();
+          document.getElementById('winnerDisplay').classList.remove('show');
+          mostrarMensaje('mensajeParticipantes', '🗑️ Todos los datos han sido eliminados', 'success');
+        } catch (error) {
+          console.error('Error al limpiar:', error);
+          mostrarMensaje('mensajeParticipantes', '❌ Error al limpiar datos', 'error');
+        }
+      }
+    }
+
+    function mostrarMensaje(elementId, mensaje, tipo) {
+      const elemento = document.getElementById(elementId);
+      elemento.innerHTML = `<div class="mensaje ${tipo}">${mensaje}</div>`;
+      setTimeout(() => {
+        elemento.innerHTML = '';
+      }, 4000);
+    }
+
+    // ========================================
+    // INICIALIZACIÓN
+    // ========================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+      verificarSesion();
+      
+      const hoy = new Date();
+      document.getElementById('fechaSorteo').valueAsDate = hoy;
+      
+      const horaFutura = new Date(hoy.getTime() + 5 * 60 * 60 * 1000);
+      const horas = horaFutura.getHours().toString().padStart(2, '0');
+      const minutos = horaFutura.getMinutes().toString().padStart(2, '0');
+      document.getElementById('horaSorteo').value = `${horas}:${minutos}`;
+
+      document.getElementById('codigoParticipante').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+      });
+
+      document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          iniciarSesion();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
